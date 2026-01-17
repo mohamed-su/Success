@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Mapping Évaluation</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .btn { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .btn:hover { background: #0056b3; }
+        .result { margin-top: 20px; padding: 10px; border-radius: 4px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        input, select, textarea { width: 100%; padding: 8px; margin: 5px 0; border: 1px solid #ddd; border-radius: 4px; }
+        label { font-weight: bold; display: block; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Test du Mapping d'Évaluation</h1>
+        <p>Ce formulaire teste le mapping des données d'évaluation vers l'entité MemberEvaluationGrid.</p>
+
+        <form id="testForm">
+            <div class="section">
+                <h3>Informations de base</h3>
+                <label>Protocol ID:</label>
+                <input type="number" name="protocolId" value="8" required>
+                
+                <label>Member ID:</label>
+                <input type="number" name="memberId" value="11" required>
+            </div>
+
+            <div class="section">
+                <h3>Section 1 - Documents administratifs</h3>
+                <label>
+                    <input type="checkbox" name="protocoleEnFrancaisFourni" checked> Protocole en français fourni
+                </label>
+                <label>
+                    <input type="checkbox" name="cvInvestigateursFournis" checked> CV investigateurs fournis
+                </label>
+                <label>
+                    <input type="checkbox" name="noteInformationFournie" checked> Note d'information fournie
+                </label>
+                <label>
+                    <input type="checkbox" name="certificatAssuranceFourni" checked> Certificat d'assurance fourni
+                </label>
+                <label>
+                    <input type="checkbox" name="piecesJustificativesFournies" checked> Pièces justificatives fournies
+                </label>
+            </div>
+
+            <div class="section">
+                <h3>Section 2 - Investigateur principal</h3>
+                <label>
+                    <input type="checkbox" name="investigateurQualifieOui" checked> Investigateur qualifié
+                </label>
+                <label>Justification:</label>
+                <textarea name="justificationInvestigateur" rows="2">Investigateur très expérimenté avec 15 ans d'expérience</textarea>
+            </div>
+
+            <div class="section">
+                <h3>Section 3 - Investigateurs associés</h3>
+                <label>
+                    <input type="checkbox" name="investigateursAssociesPerinentsOui" checked> Investigateurs associés pertinents
+                </label>
+            </div>
+
+            <div class="section">
+                <h3>Section 4 - Justification</h3>
+                <label>
+                    <input type="checkbox" name="justificationPertinenteOui" checked> Justification pertinente
+                </label>
+            </div>
+
+            <div class="section">
+                <h3>Section 5 - Méthodologie</h3>
+                <label>
+                    <input type="checkbox" name="methodologieSolideOui" checked> Méthodologie solide
+                </label>
+            </div>
+
+            <div class="section">
+                <h3>Section 6 - Budget</h3>
+                <label>
+                    <input type="checkbox" name="budgetAproprieOui" checked> Budget approprié
+                </label>
+            </div>
+
+            <div class="section">
+                <h3>Section 7 - Produit d'essai</h3>
+                <label>
+                    <input type="checkbox" name="produitEssaiPerinenceOui" checked> Produit d'essai pertinent
+                </label>
+                <label>Désignation du produit d'essai:</label>
+                <input type="text" name="produitEssaiDesignation" value="Médicament XYZ">
+            </div>
+
+            <div class="section">
+                <h3>Section 8 - Produit comparateur</h3>
+                <label>Désignation du produit comparateur:</label>
+                <input type="text" name="produitComparateurDesignation" value="Placebo">
+            </div>
+
+            <div class="section">
+                <h3>Section 9 - Produit concomitant</h3>
+                <label>Désignation du produit concomitant:</label>
+                <input type="text" name="produitConcomitantDesignation" value="Paracétamol autorisé">
+            </div>
+
+            <div class="section">
+                <h3>Décision finale</h3>
+                <label>Avis du comité:</label>
+                <select name="committeeOpinion" required>
+                    <option value="">-- Sélectionner --</option>
+                    <option value="FAVORABLE" selected>Favorable</option>
+                    <option value="AJOURNE">Ajourné</option>
+                    <option value="NON_FAVORABLE">Non favorable</option>
+                </select>
+            </div>
+
+            <div class="section">
+                <h3>Commentaires</h3>
+                <label>Résumé des observations:</label>
+                <textarea name="resumeObservations" rows="3">Protocole bien conçu, méthodologie solide, tous les documents requis sont fournis.</textarea>
+                
+                <label>Commentaires sur les documents:</label>
+                <textarea name="commentairesDocuments" rows="2">Tous les documents administratifs sont conformes.</textarea>
+            </div>
+
+            <button type="submit" class="btn">🚀 Tester le Mapping</button>
+        </form>
+
+        <div id="result"></div>
+    </div>
+
+    <script>
+        document.getElementById('testForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const data = {};
+            
+            // Convertir FormData en objet
+            for (let [key, value] of formData.entries()) {
+                if (this.querySelector(`[name="${key}"]`).type === 'checkbox') {
+                    data[key] = this.querySelector(`[name="${key}"]`).checked;
+                } else {
+                    data[key] = value;
+                }
+            }
+            
+            // Ajouter les checkboxes non cochées
+            const checkboxes = this.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(cb => {
+                if (!cb.checked) {
+                    data[cb.name] = false;
+                }
+            });
+            
+            console.log('Données à envoyer:', data);
+            
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<p>⏳ Envoi en cours...</p>';
+            
+            fetch('http://localhost:8081/api/evaluation/submit', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                console.log('Réponse:', result);
+                
+                if (result.success) {
+                    resultDiv.innerHTML = `
+                        <div class="result success">
+                            <h4>✅ Succès !</h4>
+                            <p><strong>Message:</strong> ${result.message}</p>
+                            <p><strong>ID Évaluation:</strong> ${result.evaluationId}</p>
+                            <p>Vérifiez les logs du backend pour voir le mapping détaillé.</p>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="result error">
+                            <h4>❌ Erreur</h4>
+                            <p><strong>Message:</strong> ${result.error}</p>
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                resultDiv.innerHTML = `
+                    <div class="result error">
+                        <h4>❌ Erreur de connexion</h4>
+                        <p>Impossible de contacter le serveur. Vérifiez que le backend est démarré.</p>
+                    </div>
+                `;
+            });
+        });
+    </script>
+</body>
+</html>

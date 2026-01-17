@@ -1,0 +1,590 @@
+import React, { useState, useEffect } from 'react';
+import { API_CONFIG } from '../../config/api';
+
+const BASE_URL = API_CONFIG.BASE_URL;
+import { useAuth } from '../../contexts/AuthContext';
+import UserRoleFilter from '../../components/admin/UserRoleFilter';
+
+const UserManagement = () => {
+  const { currentUser } = useAuth();
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<string | null>(null);
+  const [newUser, setNewUser] = useState({
+    username: '',
+    email: '',
+    password: '',
+    firstName: '',
+    lastName: '',
+    role: 'COMMITTEE'
+  });
+  const [resetPassword, setResetPassword] = useState('');
+  const [editUser, setEditUser] = useState({
+    id: 0,
+    firstName: '',
+    lastName: '',
+    email: '',
+    username: ''
+  });
+
+  useEffect(() => {
+    loadUsers(selectedRole);
+  }, [selectedRole]);
+  
+  const handleRoleChange = (role: string | null) => {
+    setSelectedRole(role);
+  };
+
+  const loadUsers = async (role?: string | null) => {
+    try {
+      const url = role ? `${BASE_URL}/admin/users?role=${role}` : '${BASE_URL}/admin/users';
+      const response = await fetch(url);
+      
+      if (response.ok) {
+        const data = await response.json();
+        setUsers(data.users || []);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des utilisateurs:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateUser = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await fetch('${BASE_URL}/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newUser),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setShowCreateModal(false);
+          setNewUser({
+            username: '',
+            email: '',
+            password: '',
+            firstName: '',
+            lastName: '',
+            role: 'COMMITTEE'
+          });
+          loadUsers(selectedRole);
+          alert('Utilisateur créé avec succès');
+        }
+      }
+    } catch (error) {
+      alert('Erreur lors de la création de l\'utilisateur');
+    }
+  };
+
+  const handleToggleUserStatus = async (userId) => {
+    try {
+      const response = await fetch(`${BASE_URL}/admin/users/${userId}/toggle-status`, {
+        method: 'PUT',
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          loadUsers(selectedRole);
+          alert(data.message);
+        }
+      }
+    } catch (error) {
+      alert('Erreur lors de la modification du statut');
+    }
+  };
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await fetch(`${BASE_URL}/admin/users/${selectedUser.id}/reset-password`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newPassword: resetPassword }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setShowResetModal(false);
+          setSelectedUser(null);
+          setResetPassword('');
+          alert('Mot de passe réinitialisé avec succès');
+        }
+      }
+    } catch (error) {
+      alert('Erreur lors de la réinitialisation du mot de passe');
+    }
+  };
+
+  const handleEditUser = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await fetch(`${BASE_URL}/admin/users/${editUser.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editUser),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setShowEditModal(false);
+          loadUsers(selectedRole);
+          alert('Utilisateur modifié avec succès');
+        }
+      }
+    } catch (error) {
+      alert('Erreur lors de la modification');
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    try {
+      const response = await fetch(`${BASE_URL}/admin/users/${selectedUser.id}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setShowDeleteModal(false);
+          setSelectedUser(null);
+          loadUsers(selectedRole);
+          alert('Utilisateur supprimé avec succès');
+        }
+      }
+    } catch (error) {
+      alert('Erreur lors de la suppression');
+    }
+  };
+
+  const getRoleBadgeColor = (role) => {
+    const colors = {
+      ADMIN: 'bg-red-100 text-red-800',
+      PRESIDENT: 'bg-purple-100 text-purple-800',
+      SECRETARY: 'bg-blue-100 text-blue-800',
+      COMMITTEE: 'bg-green-100 text-green-800',
+      RAPPORTEUR: 'bg-yellow-100 text-yellow-800',
+      RESEARCHER: 'bg-gray-100 text-gray-800'
+    };
+    return colors[role] || 'bg-gray-100 text-gray-800';
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#2C224E]"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+          <h1 className="text-xl sm:text-2xl font-bold text-[#1B384F]">Gestion des utilisateurs</h1>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="w-full sm:w-auto bg-[#2C224E] text-white px-4 py-2 rounded-lg hover:bg-[#1B384F] transition-colors text-sm sm:text-base"
+          >
+            Créer un utilisateur
+          </button>
+        </div>
+      
+        <div className="mb-6 bg-white p-4 rounded-lg shadow-sm">
+        <UserRoleFilter 
+          onRoleChange={handleRoleChange}
+          selectedRole={selectedRole}
+        />
+      </div>
+
+      {selectedRole && (
+        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-sm text-blue-800">
+            Affichage des utilisateurs avec le rôle : <strong>{selectedRole}</strong>
+            {users.length > 0 && ` (${users.length} utilisateur${users.length > 1 ? 's' : ''})`}
+          </p>
+        </div>
+      )}
+      
+      <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full table-auto">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Utilisateur
+                </th>
+                <th className="hidden md:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Email
+                </th>
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Rôle
+                </th>
+                <th className="hidden lg:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Statut
+                </th>
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {users.map((user) => (
+                <tr key={user.id} className="hover:bg-gray-50">
+                  <td className="px-3 sm:px-6 py-4">
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">
+                        {user.firstName} {user.lastName}
+                      </div>
+                      <div className="text-xs sm:text-sm text-gray-500">@{user.username}</div>
+                      <div className="md:hidden text-xs text-blue-600 mt-1">{user.email}</div>
+                    </div>
+                  </td>
+                  <td className="hidden md:table-cell px-3 sm:px-6 py-4 text-sm text-gray-900">
+                    {user.email}
+                  </td>
+                  <td className="px-3 sm:px-6 py-4">
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRoleBadgeColor(user.role)}`}>
+                      {user.role}
+                    </span>
+                    <div className="lg:hidden mt-1">
+                      <div className="flex items-center">
+                        <div className={`h-2 w-2 rounded-full mr-1 ${user.active ? 'bg-green-400' : 'bg-red-400'}`}></div>
+                        <span className={`text-xs ${user.active ? 'text-green-800' : 'text-red-800'}`}>
+                          {user.active ? 'Actif' : 'Inactif'}
+                        </span>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="hidden lg:table-cell px-3 sm:px-6 py-4">
+                    <div className="flex items-center">
+                      <div className={`h-2 w-2 rounded-full mr-2 ${user.active ? 'bg-green-400' : 'bg-red-400'}`}></div>
+                      <span className={`text-sm ${user.active ? 'text-green-800' : 'text-red-800'}`}>
+                        {user.active ? 'Actif' : 'Inactif'}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-3 sm:px-6 py-4">
+                    <div className="flex flex-col sm:flex-row gap-1 sm:gap-2">
+                      <button
+                        onClick={() => {
+                          setEditUser({
+                            id: user.id,
+                            firstName: user.firstName,
+                            lastName: user.lastName,
+                            email: user.email,
+                            username: user.username
+                          });
+                          setShowEditModal(true);
+                        }}
+                        className="bg-yellow-100 text-yellow-800 hover:bg-yellow-200 px-2 sm:px-3 py-1 rounded text-xs whitespace-nowrap"
+                      >
+                        Modifier
+                      </button>
+                      <button
+                        onClick={() => handleToggleUserStatus(user.id)}
+                        className={`px-2 sm:px-3 py-1 rounded text-xs whitespace-nowrap ${
+                          user.active 
+                            ? 'bg-red-100 text-red-800 hover:bg-red-200' 
+                            : 'bg-green-100 text-green-800 hover:bg-green-200'
+                        }`}
+                      >
+                        {user.active ? 'Désactiver' : 'Activer'}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSelectedUser(user);
+                          setShowResetModal(true);
+                        }}
+                        className="bg-blue-100 text-blue-800 hover:bg-blue-200 px-2 sm:px-3 py-1 rounded text-xs whitespace-nowrap"
+                      >
+                        Reset MDP
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSelectedUser(user);
+                          setShowDeleteModal(true);
+                        }}
+                        className="bg-red-100 text-red-800 hover:bg-red-200 px-2 sm:px-3 py-1 rounded text-xs whitespace-nowrap"
+                      >
+                        Supprimer
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Modal de création */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-4 sm:p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <h2 className="text-xl font-bold text-[#1B384F] mb-4">Créer un nouvel utilisateur</h2>
+            <form onSubmit={handleCreateUser} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Prénom</label>
+                  <input
+                    type="text"
+                    required
+                    value={newUser.firstName}
+                    onChange={(e) => setNewUser({...newUser, firstName: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C224E] focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Nom</label>
+                  <input
+                    type="text"
+                    required
+                    value={newUser.lastName}
+                    onChange={(e) => setNewUser({...newUser, lastName: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C224E] focus:border-transparent"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nom d'utilisateur</label>
+                <input
+                  type="text"
+                  required
+                  value={newUser.username}
+                  onChange={(e) => setNewUser({...newUser, username: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C224E] focus:border-transparent"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input
+                  type="email"
+                  required
+                  value={newUser.email}
+                  onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C224E] focus:border-transparent"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Mot de passe</label>
+                <input
+                  type="password"
+                  required
+                  value={newUser.password}
+                  onChange={(e) => setNewUser({...newUser, password: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C224E] focus:border-transparent"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Rôle</label>
+                <select
+                  value={newUser.role}
+                  onChange={(e) => setNewUser({...newUser, role: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C224E] focus:border-transparent"
+                >
+                  <option value="COMMITTEE">Membre du comité</option>
+                  <option value="SECRETARY">Secrétaire</option>
+                  <option value="PRESIDENT">Président</option>
+                  <option value="RAPPORTEUR">Rapporteur</option>
+                  <option value="ADMIN">Administrateur</option>
+                </select>
+              </div>
+              
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateModal(false)}
+                  className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-[#2C224E] text-white rounded-lg hover:bg-[#1B384F]"
+                >
+                  Créer
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de modification */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-4 sm:p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <h2 className="text-xl font-bold text-[#1B384F] mb-4">Modifier l'utilisateur</h2>
+            <form onSubmit={handleEditUser} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Prénom</label>
+                  <input
+                    type="text"
+                    required
+                    value={editUser.firstName}
+                    onChange={(e) => setEditUser({...editUser, firstName: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C224E] focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Nom</label>
+                  <input
+                    type="text"
+                    required
+                    value={editUser.lastName}
+                    onChange={(e) => setEditUser({...editUser, lastName: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C224E] focus:border-transparent"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input
+                  type="email"
+                  required
+                  value={editUser.email}
+                  onChange={(e) => setEditUser({...editUser, email: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C224E] focus:border-transparent"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nom d'utilisateur</label>
+                <input
+                  type="text"
+                  required
+                  value={editUser.username}
+                  onChange={(e) => setEditUser({...editUser, username: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C224E] focus:border-transparent"
+                />
+              </div>
+              
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(false)}
+                  className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-[#2C224E] text-white rounded-lg hover:bg-[#1B384F]"
+                >
+                  Modifier
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de suppression */}
+      {showDeleteModal && selectedUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-4 sm:p-6 w-full max-w-md">
+            <h2 className="text-xl font-bold text-red-600 mb-4">Confirmer la suppression</h2>
+            <p className="text-gray-700 mb-2">
+              Êtes-vous sûr de vouloir supprimer cet utilisateur ?
+            </p>
+            <p className="text-gray-900 font-semibold mb-4">
+              {selectedUser.firstName} {selectedUser.lastName} ({selectedUser.email})
+            </p>
+            <p className="text-sm text-red-600 mb-6">
+              Cette action est irréversible et supprimera définitivement l'utilisateur de la base de données.
+            </p>
+            
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setSelectedUser(null);
+                }}
+                className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleDeleteUser}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+              >
+                Supprimer définitivement
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de réinitialisation */}
+      {showResetModal && selectedUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-4 sm:p-6 w-full max-w-md">
+            <h2 className="text-xl font-bold text-[#1B384F] mb-4">
+              Réinitialiser le mot de passe
+            </h2>
+            <p className="text-gray-600 mb-4">
+              Utilisateur: {selectedUser.firstName} {selectedUser.lastName}
+            </p>
+            <form onSubmit={handleResetPassword} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nouveau mot de passe
+                </label>
+                <input
+                  type="password"
+                  required
+                  minLength="8"
+                  value={resetPassword}
+                  onChange={(e) => setResetPassword(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2C224E] focus:border-transparent"
+                />
+              </div>
+              
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowResetModal(false);
+                    setSelectedUser(null);
+                    setResetPassword('');
+                  }}
+                  className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-[#2C224E] text-white rounded-lg hover:bg-[#1B384F]"
+                >
+                  Réinitialiser
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      </div>
+    </div>
+  );
+};
+
+export default UserManagement;

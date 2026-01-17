@@ -1,0 +1,146 @@
+package comite.demo.controller;
+
+import comite.demo.entity.ProtocolEvaluationForm;
+import comite.demo.entity.ProtocolSubmission;
+import comite.demo.repository.ProtocolEvaluationFormRepository;
+import comite.demo.repository.ProtocolSubmissionRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.LocalDateTime;
+import java.util.Map;
+import java.util.UUID;
+
+@RestController
+@RequestMapping("/api/evaluation")
+@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:5173"})
+public class ProtocolEvaluationController {
+
+    @Autowired
+    private ProtocolEvaluationFormRepository evaluationRepository;
+
+    @Autowired
+    private ProtocolSubmissionRepository protocolRepository;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    private final String UPLOAD_DIR = "demo/uploads/signatures/";
+
+    @PostMapping("/save")
+    public ResponseEntity<?> saveEvaluation(@RequestBody Map<String, Object> request) {
+        try {
+            Long protocolId = Long.valueOf(request.get("protocolId").toString());
+            Long memberId = Long.valueOf(request.get("memberId").toString());
+            String status = request.get("status").toString();
+
+            ProtocolSubmission protocol = protocolRepository.findById(protocolId).orElse(null);
+            if (protocol == null) {
+                return ResponseEntity.status(404).body(Map.of("success", false, "error", "Protocole non trouvé"));
+            }
+
+            ProtocolEvaluationForm evaluation = evaluationRepository
+                .findByProtocolIdAndMemberId(protocolId, memberId)
+                .orElse(new ProtocolEvaluationForm());
+
+            evaluation.setProtocolId(protocolId);
+            evaluation.setMemberId(memberId);
+            evaluation.setResearcherId(memberId);
+            
+            evaluation.setProtocolFrench((String) request.get("protocolFrench"));
+            evaluation.setCvSigned((String) request.get("cvSigned"));
+            evaluation.setConsentForm((String) request.get("consentForm"));
+            evaluation.setInsurance((String) request.get("insurance"));
+            evaluation.setPaymentProof((String) request.get("paymentProof"));
+            evaluation.setInvestigatorQualified((String) request.get("investigatorQualified"));
+            evaluation.setInvestigatorExplanation((String) request.get("investigatorExplanation"));
+            evaluation.setAssociatedInvestigators((String) request.get("associatedInvestigators"));
+            evaluation.setStudyJustification((String) request.get("studyJustification"));
+            evaluation.setMethodology((String) request.get("methodology"));
+            evaluation.setBudget((String) request.get("budget"));
+            evaluation.setInvestigationProduct((String) request.get("investigationProduct"));
+            evaluation.setComparatorProduct((String) request.get("comparatorProduct"));
+            evaluation.setConcomitantProduct((String) request.get("concomitantProduct"));
+            evaluation.setDecision((String) request.get("decision"));
+            evaluation.setObservations((String) request.get("observations"));
+            evaluation.setEvaluatorName((String) request.get("evaluatorName"));
+            evaluation.setStatus(status);
+            
+            if (request.get("comments") != null) {
+                evaluation.setComments(objectMapper.writeValueAsString(request.get("comments")));
+            }
+            
+            if ("COMPLETED".equals(status)) {
+                evaluation.setSubmittedAt(LocalDateTime.now());
+            }
+
+            evaluationRepository.save(evaluation);
+
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "COMPLETED".equals(status) ? "Évaluation soumise avec succès" : "Brouillon sauvegardé",
+                "evaluationId", evaluation.getId()
+            ));
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("success", false, "error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/upload-signature")
+    public ResponseEntity<?> uploadSignature(@RequestParam("file") MultipartFile file, @RequestParam("evaluationId") Long evaluationId) {
+        try {
+            if (file.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("success", false, "error", "Fichier vide"));
+            }
+
+            File uploadDir = new File(UPLOAD_DIR);
+            if (!uploadDir.exists()) {
+                uploadDir.mkdirs();
+            }
+
+            String fileName = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
+            Path filePath = Paths.get(UPLOAD_DIR + fileName);
+            Files.write(filePath, file.getBytes());
+
+            ProtocolEvaluationForm evaluation = evaluationRepository.findById(evaluationId).orElse(null);
+            if (evaluation != null) {
+                evaluation.setSignatureFileName(fileName);
+                evaluationRepository.save(evaluation);
+            }
+
+            return ResponseEntity.ok(Map.of("success", true, "fileName", fileName));
+
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("success", false, "error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/protocol/{protocolId}/all")
+    public ResponseEntity<?> getEvaluationsByProtocol(@PathVariable Long protocolId) {
+        try {
+            var evaluations = evaluationRepository.findByProtocolId(protocolId);
+            return ResponseEntity.ok(Map.of("success", true, "evaluations", evaluations));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("success", false, "error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/member/{memberId}")
+    public ResponseEntity<?> getEvaluationsByMember(@PathVariable Long memberId) {
+        try {
+            var evaluations = evaluationRepository.findByMemberId(memberId);
+            return ResponseEntity.ok(Map.of("success", true, "evaluations", evaluations));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("success", false, "error", e.getMessage()));
+        }
+    }
+}

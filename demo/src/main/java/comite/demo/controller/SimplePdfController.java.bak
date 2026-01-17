@@ -1,0 +1,120 @@
+package comite.demo.controller;
+
+import comite.demo.entity.ProtocolSubmission;
+import comite.demo.repository.ProtocolSubmissionRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import com.itextpdf.kernel.pdf.PdfDocument;
+import com.itextpdf.kernel.pdf.PdfWriter;
+import com.itextpdf.layout.Document;
+import com.itextpdf.layout.element.Paragraph;
+import com.itextpdf.layout.element.Table;
+import com.itextpdf.layout.element.Cell;
+import com.itextpdf.layout.properties.TextAlignment;
+import com.itextpdf.layout.properties.UnitValue;
+
+import java.io.ByteArrayOutputStream;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/secretary")
+@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:5173"})
+public class SimplePdfController {
+
+    @Autowired
+    private ProtocolSubmissionRepository repository;
+
+    @GetMapping("/protocols/simple-pdf")
+    public ResponseEntity<byte[]> exportSimplePdf(@RequestParam(defaultValue = "all") String status) {
+        try {
+            List<ProtocolSubmission> protocols;
+            String title;
+            
+            switch (status.toLowerCase()) {
+                case "pending":
+                    protocols = repository.findByStatusOrderByIdAsc("SUBMITTED");
+                    title = "Protocoles en Attente";
+                    break;
+                case "verified":
+                    protocols = repository.findByStatusOrderByIdAsc("VERIFIED");
+                    title = "Protocoles Conformes";
+                    break;
+                case "rejected":
+                    protocols = repository.findByStatusOrderByIdAsc("VERIFICATION_REJECTED");
+                    title = "Protocoles Refusés";
+                    break;
+                default:
+                    protocols = repository.findAllByOrderByIdAsc();
+                    title = "Tous les Protocoles";
+            }
+
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            PdfWriter writer = new PdfWriter(baos);
+            PdfDocument pdf = new PdfDocument(writer);
+            Document document = new Document(pdf);
+
+            // En-tête simple
+            document.add(new Paragraph("COMITÉ D'ÉTHIQUE DE LA RECHERCHE")
+                .setTextAlignment(TextAlignment.CENTER)
+                .setFontSize(18)
+                .setBold());
+            
+            document.add(new Paragraph(title)
+                .setTextAlignment(TextAlignment.CENTER)
+                .setFontSize(14)
+                .setBold());
+            
+            document.add(new Paragraph("Généré le: " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy à HH:mm")))
+                .setTextAlignment(TextAlignment.CENTER)
+                .setFontSize(10));
+            
+            document.add(new Paragraph(" "));
+
+            // Tableau simple
+            Table table = new Table(UnitValue.createPercentArray(new float[]{10, 30, 25, 20, 15}));
+            table.setWidth(UnitValue.createPercentValue(100));
+            
+            // En-têtes
+            table.addHeaderCell(new Cell().add(new Paragraph("ID").setBold()));
+            table.addHeaderCell(new Cell().add(new Paragraph("Titre").setBold()));
+            table.addHeaderCell(new Cell().add(new Paragraph("Investigateur").setBold()));
+            table.addHeaderCell(new Cell().add(new Paragraph("Institution").setBold()));
+            table.addHeaderCell(new Cell().add(new Paragraph("Statut").setBold()));
+
+            // Données
+            for (ProtocolSubmission protocol : protocols) {
+                table.addCell(new Cell().add(new Paragraph(String.valueOf(protocol.getId()))));
+                table.addCell(new Cell().add(new Paragraph(protocol.getTitle() != null ? protocol.getTitle() : "")));
+                table.addCell(new Cell().add(new Paragraph(protocol.getPrincipalInvestigator() != null ? protocol.getPrincipalInvestigator() : "")));
+                table.addCell(new Cell().add(new Paragraph(protocol.getInstitution() != null ? protocol.getInstitution() : "")));
+                table.addCell(new Cell().add(new Paragraph(protocol.getStatus() != null ? protocol.getStatus() : "")));
+            }
+
+            document.add(table);
+            
+            // Résumé
+            document.add(new Paragraph(" "));
+            document.add(new Paragraph("Total: " + protocols.size() + " protocoles"));
+
+            document.close();
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_PDF);
+            headers.setContentDispositionFormData("attachment", "liste-protocoles-" + status + ".pdf");
+
+            return ResponseEntity.ok()
+                .headers(headers)
+                .body(baos.toByteArray());
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).build();
+        }
+    }
+}

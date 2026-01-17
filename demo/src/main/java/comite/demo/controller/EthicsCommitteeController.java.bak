@@ -1,0 +1,352 @@
+package comite.demo.controller;
+
+import comite.demo.entity.ProtocolSubmission;
+import comite.demo.entity.User;
+import comite.demo.repository.ProtocolSubmissionRepository;
+import comite.demo.repository.UserRepository;
+import com.itextpdf.kernel.pdf.PdfDocument;
+import com.itextpdf.kernel.pdf.PdfWriter;
+import com.itextpdf.layout.Document;
+import com.itextpdf.layout.element.Paragraph;
+import com.itextpdf.layout.element.Table;
+import com.itextpdf.layout.element.Cell;
+import com.itextpdf.layout.properties.TextAlignment;
+import com.itextpdf.layout.element.Image;
+import com.itextpdf.io.image.ImageDataFactory;
+import com.itextpdf.layout.properties.UnitValue;
+import com.itextpdf.kernel.colors.DeviceRgb;
+import com.itextpdf.kernel.colors.ColorConstants;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.io.ByteArrayOutputStream;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/ethics-committee")
+@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:5173"})
+public class EthicsCommitteeController {
+
+    @Autowired
+    private ProtocolSubmissionRepository repository;
+    
+    @Autowired
+    private UserRepository userRepository;
+
+    @GetMapping("/protocols/verified")
+    public ResponseEntity<?> getVerifiedProtocols() {
+        try {
+            List<ProtocolSubmission> protocols = repository.findByStatusOrderByIdAsc("VERIFIED");
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("protocols", protocols);
+            response.put("count", protocols.size());
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of(
+                "success", false,
+                "error", e.getMessage()
+            ));
+        }
+    }
+    
+    @GetMapping("/test")
+    @CrossOrigin(origins = {"http://localhost:3000", "http://localhost:5173"})
+    public ResponseEntity<?> test() {
+        return ResponseEntity.ok(Map.of("success", true, "message", "Test OK"));
+    }
+    
+    @GetMapping("/committee-members")
+    @CrossOrigin(origins = {"http://localhost:3000", "http://localhost:5173"})
+    public ResponseEntity<?> getCommitteeMembers() {
+        try {
+            List<User> members = userRepository.findCommitteeMembers();
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("members", members);
+            response.put("count", members.size());
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of(
+                "success", false,
+                "error", e.getMessage()
+            ));
+        }
+    }
+
+    @GetMapping("/protocols/export-for-president")
+    public ResponseEntity<byte[]> exportForPresident() {
+        try {
+            List<ProtocolSubmission> protocols = repository.findByStatusOrderByIdAsc("VERIFIED");
+
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            PdfWriter writer = new PdfWriter(baos);
+            PdfDocument pdf = new PdfDocument(writer);
+            Document document = new Document(pdf);
+
+            // Logo et en-tête officiel
+            try {
+                Path logoPath = Paths.get("uploads/protocols/armoiries-burkina.png");
+                if (Files.exists(logoPath)) {
+                    Image logo = new Image(ImageDataFactory.create(logoPath.toString()));
+                    logo.setWidth(70).setHeight(70);
+                    logo.setHorizontalAlignment(com.itextpdf.layout.properties.HorizontalAlignment.CENTER);
+                    document.add(logo);
+                }
+            } catch (Exception e) {
+                // Continuer sans logo si non trouvé
+            }
+            
+            document.add(new Paragraph("BURKINA FASO")
+                .setTextAlignment(TextAlignment.CENTER)
+                .setFontSize(16)
+                .setBold());
+            
+            document.add(new Paragraph("Unité - Travail - Progrès")
+                .setTextAlignment(TextAlignment.CENTER)
+                .setFontSize(11)
+                .setItalic());
+            
+            document.add(new Paragraph(" "));
+            
+            document.add(new Paragraph("COMITÉ D'ÉTHIQUE DE LA RECHERCHE")
+                .setTextAlignment(TextAlignment.CENTER)
+                .setFontSize(20)
+                .setBold()
+                .setFontColor(new DeviceRgb(0, 51, 102)));
+            
+            document.add(new Paragraph("RAPPORT OFFICIEL")
+                .setTextAlignment(TextAlignment.CENTER)
+                .setFontSize(16)
+                .setBold());
+            
+            document.add(new Paragraph("Liste des Protocoles Conformes pour Évaluation Éthique")
+                .setTextAlignment(TextAlignment.CENTER)
+                .setFontSize(14)
+                .setBold());
+            
+            document.add(new Paragraph("À l'attention de Monsieur le Président du Comité d'Éthique")
+                .setTextAlignment(TextAlignment.CENTER)
+                .setFontSize(12)
+                .setItalic());
+            
+            document.add(new Paragraph("Généré le: " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy à HH:mm")))
+                .setTextAlignment(TextAlignment.CENTER)
+                .setFontSize(10));
+            
+            document.add(new Paragraph(" "));
+            document.add(new Paragraph(" "));
+
+            // Introduction
+            document.add(new Paragraph("Monsieur le Président,")
+                .setFontSize(12));
+            document.add(new Paragraph("Veuillez trouver ci-dessous la liste des protocoles de recherche ayant passé avec succès la phase de vérification administrative et technique. Ces protocoles sont désormais prêts pour l'évaluation éthique par le comité.")
+                .setFontSize(11));
+            document.add(new Paragraph(" "));
+
+            // Tableau détaillé amélioré
+            Table table = new Table(UnitValue.createPercentArray(new float[]{8, 28, 18, 18, 10, 10, 12}));
+            table.setWidth(UnitValue.createPercentValue(100));
+            table.setMarginTop(15);
+            table.setMarginBottom(15);
+            
+            // En-têtes avec style professionnel
+            String[] headerTexts = {"Réf.", "THÈME DE RECHERCHE", "CHERCHEUR PRINCIPAL", "INSTITUTION", "PARTICIPANTS", "DURÉE", "VÉRIFICATION"};
+            
+            for (String headerText : headerTexts) {
+                Cell headerCell = new Cell().add(new Paragraph(headerText)
+                    .setBold()
+                    .setFontSize(9)
+                    .setTextAlignment(TextAlignment.CENTER)
+                    .setFontColor(ColorConstants.WHITE))
+                    .setBackgroundColor(new DeviceRgb(0, 51, 102))
+                    .setPadding(8);
+                table.addHeaderCell(headerCell);
+            }
+
+            // Données avec formatage professionnel
+            for (ProtocolSubmission protocol : protocols) {
+                table.addCell(new Cell().add(new Paragraph("PROT-" + protocol.getId()).setFontSize(9).setBold()));
+                
+                // Thème de recherche (titre)
+                table.addCell(new Cell().add(new Paragraph(protocol.getTitle()).setFontSize(9)));
+                
+                // Chercheur principal
+                table.addCell(new Cell().add(new Paragraph(protocol.getPrincipalInvestigator()).setFontSize(9)));
+                
+                // Institution
+                table.addCell(new Cell().add(new Paragraph(protocol.getInstitution()).setFontSize(9)));
+                
+                // Participants
+                table.addCell(new Cell().add(new Paragraph(String.valueOf(protocol.getParticipants())).setFontSize(9).setTextAlignment(TextAlignment.CENTER)));
+                
+                // Durée
+                table.addCell(new Cell().add(new Paragraph(protocol.getDuration() + " mois").setFontSize(9).setTextAlignment(TextAlignment.CENTER)));
+                
+                // Date vérification
+                table.addCell(new Cell().add(new Paragraph(
+                    protocol.getVerifiedAt() != null ? 
+                    protocol.getVerifiedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) : 
+                    "N/A").setFontSize(9)));
+            }
+
+            document.add(table);
+            
+            // Résumé exécutif
+            document.add(new Paragraph(" "));
+            document.add(new Paragraph("RÉSUMÉ EXÉCUTIF").setBold().setFontSize(12));
+            
+            int totalParticipants = protocols.stream().mapToInt(ProtocolSubmission::getParticipants).sum();
+            double dureeMoyenne = protocols.stream().mapToInt(ProtocolSubmission::getDuration).average().orElse(0);
+            
+            document.add(new Paragraph("• Nombre total de protocoles conformes: " + protocols.size()));
+            document.add(new Paragraph("• Nombre total de participants impliqués: " + totalParticipants));
+            document.add(new Paragraph("• Durée moyenne des études: " + String.format("%.1f", dureeMoyenne) + " mois"));
+            
+            // Recommandations
+            document.add(new Paragraph(" "));
+            document.add(new Paragraph("RECOMMANDATIONS").setBold().setFontSize(12));
+            document.add(new Paragraph("Ces protocoles nécessitent une évaluation éthique approfondie avant approbation finale. Il est recommandé de procéder à leur répartition entre les membres du comité selon leurs domaines d'expertise."));
+            
+            // Signature
+            document.add(new Paragraph(" "));
+            document.add(new Paragraph(" "));
+            document.add(new Paragraph("Le Secrétariat du Comité d'Éthique")
+                .setTextAlignment(TextAlignment.RIGHT)
+                .setFontSize(10)
+                .setItalic());
+
+            document.close();
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_PDF);
+            headers.setContentDispositionFormData("attachment", "protocoles-pour-president-" + 
+                LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")) + ".pdf");
+
+            return ResponseEntity.ok()
+                .headers(headers)
+                .body(baos.toByteArray());
+
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build();
+        }
+    }
+
+    @PostMapping("/protocols/{id}/assign-to-member")
+    public ResponseEntity<?> assignToMember(@PathVariable Long id, @RequestBody Map<String, String> request) {
+        try {
+            var protocol = repository.findById(id);
+            if (protocol.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            ProtocolSubmission p = protocol.get();
+            String memberName = request.get("memberName");
+            
+            // Mise à jour du statut pour indiquer l'assignation
+            p.setStatus("ASSIGNED_TO_MEMBER");
+            p.setVerificationComments("Assigné au membre: " + memberName + " le " + 
+                LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy à HH:mm")));
+            
+            repository.save(p);
+
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Protocole assigné au membre " + memberName + " avec succès",
+                "assignedTo", memberName
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of(
+                "success", false,
+                "error", e.getMessage()
+            ));
+        }
+    }
+
+    @GetMapping("/protocols/{id}/export-for-member")
+    public ResponseEntity<byte[]> exportProtocolForMember(@PathVariable Long id) {
+        try {
+            var protocolOpt = repository.findById(id);
+            if (protocolOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            ProtocolSubmission protocol = protocolOpt.get();
+
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            PdfWriter writer = new PdfWriter(baos);
+            PdfDocument pdf = new PdfDocument(writer);
+            Document document = new Document(pdf);
+
+            // En-tête
+            document.add(new Paragraph("DOSSIER DE PROTOCOLE POUR ÉVALUATION")
+                .setTextAlignment(TextAlignment.CENTER)
+                .setFontSize(16)
+                .setBold());
+            
+            document.add(new Paragraph("Protocole ID: PROT-" + protocol.getId())
+                .setTextAlignment(TextAlignment.CENTER)
+                .setFontSize(12)
+                .setBold());
+            
+            document.add(new Paragraph(" "));
+
+            // Détails du protocole
+            document.add(new Paragraph("INFORMATIONS GÉNÉRALES").setBold().setFontSize(14));
+            document.add(new Paragraph("Titre: " + protocol.getTitle()));
+            document.add(new Paragraph("Investigateur Principal: " + protocol.getPrincipalInvestigator()));
+            document.add(new Paragraph("Institution: " + protocol.getInstitution()));
+            document.add(new Paragraph("Type d'étude: " + (protocol.getStudyType() != null ? protocol.getStudyType() : "Non spécifié")));
+            document.add(new Paragraph("Durée prévue: " + protocol.getDuration() + " mois"));
+            document.add(new Paragraph("Nombre de participants: " + protocol.getParticipants()));
+            
+            document.add(new Paragraph(" "));
+            document.add(new Paragraph("DESCRIPTION").setBold().setFontSize(14));
+            document.add(new Paragraph(protocol.getDescription()));
+            
+            if (protocol.getEthicsConsiderations() != null) {
+                document.add(new Paragraph(" "));
+                document.add(new Paragraph("CONSIDÉRATIONS ÉTHIQUES").setBold().setFontSize(14));
+                document.add(new Paragraph(protocol.getEthicsConsiderations()));
+            }
+
+            document.add(new Paragraph(" "));
+            document.add(new Paragraph("FICHIERS JOINTS").setBold().setFontSize(14));
+            document.add(new Paragraph("• Fichier protocole: " + protocol.getProtocolFileName()));
+            document.add(new Paragraph("• Formulaire de consentement: " + protocol.getConsentFormFileName()));
+            document.add(new Paragraph("• CV: " + protocol.getCvFilesNames()));
+            document.add(new Paragraph("• Reçu de paiement: " + protocol.getPaymentReceiptFileName()));
+
+            document.add(new Paragraph(" "));
+            document.add(new Paragraph("STATUT ET DATES").setBold().setFontSize(14));
+            document.add(new Paragraph("Date de soumission: " + protocol.getSubmittedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy à HH:mm"))));
+            if (protocol.getVerifiedAt() != null) {
+                document.add(new Paragraph("Date de vérification: " + protocol.getVerifiedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy à HH:mm"))));
+            }
+
+            document.close();
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_PDF);
+            headers.setContentDispositionFormData("attachment", "protocole-PROT-" + id + "-evaluation.pdf");
+
+            return ResponseEntity.ok()
+                .headers(headers)
+                .body(baos.toByteArray());
+
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build();
+        }
+    }
+}

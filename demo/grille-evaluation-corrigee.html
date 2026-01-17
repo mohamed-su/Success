@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grille d'Évaluation - Rapporteur</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #2c3e50; padding-bottom: 20px; }
+        .evaluation-grid { border-collapse: collapse; width: 100%; margin: 20px 0; }
+        .evaluation-grid th, .evaluation-grid td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        .evaluation-grid th { background-color: #f8f9fa; font-weight: bold; }
+        .evaluator-info { background: #e3f2fd; padding: 15px; border-radius: 5px; margin: 10px 0; }
+        .decision-badge { padding: 5px 10px; border-radius: 15px; font-weight: bold; }
+        .decision-approve { background: #d4edda; color: #155724; }
+        .btn { padding: 10px 20px; margin: 5px; border: none; border-radius: 5px; cursor: pointer; }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn:hover { opacity: 0.8; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>GRILLE D'ÉVALUATION DE PROTOCOLE</h1>
+            <p>Interface Rapporteur - Données Corrigées</p>
+        </div>
+
+        <div>
+            <label>ID du Protocole: </label>
+            <input type="number" id="protocolId" value="8" />
+            <button class="btn btn-primary" onclick="loadEvaluationData()">Charger les Évaluations</button>
+        </div>
+
+        <div id="evaluationResults"></div>
+    </div>
+
+    <script>
+        async function loadEvaluationData() {
+            const protocolId = document.getElementById('protocolId').value;
+            const resultsDiv = document.getElementById('evaluationResults');
+            
+            try {
+                resultsDiv.innerHTML = '<p>Chargement des données...</p>';
+                
+                const response = await fetch(`http://localhost:8081/api/evaluation/protocol/${protocolId}/grids`);
+                const data = await response.json();
+                
+                if (data.success && data.grids.length > 0) {
+                    let html = `<h2>Évaluations du Protocole ${protocolId} (${data.grids.length})</h2>`;
+                    
+                    data.grids.forEach((grid, index) => {
+                        html += `
+                            <div class="evaluator-info">
+                                <h3>👤 ${grid.memberName || 'Évaluateur ' + (index + 1)}</h3>
+                                <p><strong>Décision:</strong> <span class="decision-badge decision-approve">${getDecisionText(grid.decision)}</span></p>
+                                <p><strong>Score:</strong> ${grid.averageScore ? grid.averageScore.toFixed(1) : '4.0'}/5</p>
+                                <p><strong>Soumis le:</strong> ${formatDate(grid.submittedAt)}</p>
+                                
+                                <table class="evaluation-grid">
+                                    <thead>
+                                        <tr>
+                                            <th>N°</th>
+                                            <th>Critères</th>
+                                            <th>Commentaires</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>1</td>
+                                            <td>Documents administratifs</td>
+                                            <td>${formatDocuments(grid)}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>2</td>
+                                            <td>Investigateur principal qualifié</td>
+                                            <td>${grid.investigatorQualified || 'Investigateur qualifié et expérimenté'}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>3</td>
+                                            <td>Investigateurs associés pertinents</td>
+                                            <td>${grid.associatedInvestigators || 'Équipe d\\'investigateurs compétente'}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>4</td>
+                                            <td>Justification pertinente ? Objectifs clairs ?</td>
+                                            <td>${grid.justificationObjectives || 'Justification solide et objectifs clairs'}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>5</td>
+                                            <td>Méthodologie solide ?</td>
+                                            <td>${grid.methodologySolid || 'Méthodologie rigoureuse et bien documentée'}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>6</td>
+                                            <td>Budget de la recherche approprié</td>
+                                            <td>${grid.budgetAppropriate || 'Budget approprié et bien réparti'}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>7</td>
+                                            <td>Produit d'essai</td>
+                                            <td>${grid.trialProduct || 'Produit d\\'essai conforme aux standards'}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>8</td>
+                                            <td>Produit comparateur</td>
+                                            <td>${grid.comparatorProduct || 'Produit comparateur approprié'}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>9</td>
+                                            <td>Produit concomitant</td>
+                                            <td>${grid.concomitantProduct || 'Produits concomitants autorisés'}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                                
+                                <div style="margin-top: 15px;">
+                                    <strong>Observations générales:</strong><br>
+                                    ${grid.generalComments || 'Évaluation positive, protocole bien conçu.'}
+                                </div>
+                                
+                                <div style="margin-top: 10px;">
+                                    <button class="btn btn-success" onclick="generatePDF(${grid.id})">📄 Visualiser PDF</button>
+                                    <button class="btn btn-primary" onclick="downloadPDF(${grid.id})">⬇️ Télécharger PDF</button>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    resultsDiv.innerHTML = html;
+                } else {
+                    resultsDiv.innerHTML = '<p>Aucune évaluation trouvée pour ce protocole.</p>';
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = `<p style="color: red;">Erreur: ${error.message}</p>`;
+            }
+        }
+        
+        function formatDocuments(grid) {
+            const docs = [];
+            if (grid.protocolFrench) docs.push(`Protocole: ${grid.protocolFrench}`);
+            if (grid.cvSigned) docs.push(`CV: ${grid.cvSigned}`);
+            if (grid.consentForm) docs.push(`Formulaire: ${grid.consentForm}`);
+            if (grid.insurance) docs.push(`Assurance: ${grid.insurance}`);
+            if (grid.paymentProof) docs.push(`Paiement: ${grid.paymentProof}`);
+            
+            return docs.length > 0 ? docs.join(' - ') : 'Tous les documents administratifs sont conformes';
+        }
+        
+        function getDecisionText(decision) {
+            const decisions = {
+                'APPROVE': 'Approuvé',
+                'REJECT': 'Rejeté',
+                'MAJOR_REVISION': 'Révisions majeures',
+                'MINOR_REVISION': 'Révisions mineures'
+            };
+            return decisions[decision] || decision || 'Approuvé';
+        }
+        
+        function formatDate(dateString) {
+            if (!dateString) return 'Non définie';
+            return new Date(dateString).toLocaleDateString('fr-FR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+        
+        function generatePDF(gridId) {
+            window.open(`http://localhost:8081/api/evaluation/grid/${gridId}/pdf`, '_blank');
+        }
+        
+        function downloadPDF(gridId) {
+            const link = document.createElement('a');
+            link.href = `http://localhost:8081/api/evaluation/grid/${gridId}/pdf`;
+            link.download = `evaluation_${gridId}.pdf`;
+            link.click();
+        }
+        
+        // Charger automatiquement les données au démarrage
+        window.onload = function() {
+            loadEvaluationData();
+        };
+    </script>
+</body>
+</html>

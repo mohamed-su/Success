@@ -1,0 +1,20 @@
+-- Ajoute les colonnes manquantes à la table protocol_evaluations
+ALTER TABLE protocol_evaluations 
+ADD COLUMN IF NOT EXISTS deliberation_number VARCHAR(50),
+ADD COLUMN IF NOT EXISTS research_title TEXT,
+ADD COLUMN IF NOT EXISTS protocol_reference VARCHAR(50),
+ADD COLUMN IF NOT EXISTS principal_investigator VARCHAR(255),
+ADD COLUMN IF NOT EXISTS requester_reference VARCHAR(255),
+ADD COLUMN IF NOT EXISTS research_site VARCHAR(255),
+ADD COLUMN IF NOT EXISTS deliberation_date DATE,
+ADD COLUMN IF NOT EXISTS documentation VARCHAR(100),
+ADD COLUMN IF NOT EXISTS scientific_conception BOOLEAN,
+ADD COLUMN IF NOT EXISTS participant_protection BOOLEAN,
+ADD COLUMN IF NOT EXISTS data_confidentiality BOOLEAN,
+ADD COLUMN IF NOT EXISTS consent_process BOOLEAN,
+ADD COLUMN IF NOT EXISTS research_budget BOOLEAN,
+ADD COLUMN IF NOT EXISTS cv_documents BOOLEAN,
+ADD COLUMN IF NOT EXISTS observations TEXT,
+ADD COLUMN IF NOT EXISTS reserves TEXT,
+ADD COLUMN IF NOT EXISTS recommendations TEXT,
+ADD COLUMN IF NOT EXISTS members_present TEXT;

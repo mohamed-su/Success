@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tableau de Bord - Président</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f5f5f5; }
+        
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 250px;
+            height: 100vh;
+            background: #2c3e50;
+            color: white;
+            padding: 20px 0;
+        }
+        
+        .sidebar h2 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #ecf0f1;
+            font-size: 18px;
+        }
+        
+        .sidebar ul {
+            list-style: none;
+        }
+        
+        .sidebar li {
+            margin: 10px 0;
+        }
+        
+        .sidebar a {
+            display: block;
+            color: #bdc3c7;
+            text-decoration: none;
+            padding: 12px 20px;
+            transition: all 0.3s;
+        }
+        
+        .sidebar a:hover, .sidebar a.active {
+            background: #34495e;
+            color: #ecf0f1;
+            border-left: 4px solid #3498db;
+        }
+        
+        .main-content {
+            margin-left: 250px;
+            padding: 20px;
+        }
+        
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .protocols-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .protocol-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-left: 4px solid #3498db;
+        }
+        
+        .protocol-title {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .protocol-info {
+            color: #7f8c8d;
+            font-size: 14px;
+            margin: 5px 0;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        .status-verified { background: #d4edda; color: #155724; }
+        .status-assigned { background: #fff3cd; color: #856404; }
+        .status-approved { background: #d1ecf1; color: #0c5460; }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #2980b9;
+        }
+        
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #229954;
+        }
+        
+        .deliberations-table {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .deliberations-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .deliberations-table th,
+        .deliberations-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ecf0f1;
+        }
+        
+        .deliberations-table th {
+            background: #34495e;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .deliberations-table tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .decision-favorable { color: #27ae60; font-weight: bold; }
+        .decision-ajourne { color: #f39c12; font-weight: bold; }
+        .decision-defavorable { color: #e74c3c; font-weight: bold; }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>Président du Comité</h2>
+        <ul>
+            <li><a href="#" onclick="showProtocols()" class="active">Mes Protocoles Assignés</a></li>
+            <li><a href="#" onclick="showFinalReports()">📋 Rapport Final</a></li>
+            <li><a href="#" onclick="logout()">Déconnexion</a></li>
+        </ul>
+    </div>
+
+    <div class="main-content">
+        <div class="header">
+            <h1 id="page-title">Protocoles Assignés</h1>
+            <p id="page-description">Gérez les protocoles de recherche assignés au comité</p>
+        </div>
+
+        <div id="protocols-section">
+            <div class="loading">Chargement des protocoles...</div>
+        </div>
+
+        <div id="reports-section" style="display: none;">
+            <div class="loading">Chargement des rapports finaux...</div>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = {
+            id: localStorage.getItem('userId') || '3',
+            role: localStorage.getItem('userRole') || 'president'
+        };
+
+        function showProtocols() {
+            document.getElementById('page-title').textContent = 'Protocoles Assignés';
+            document.getElementById('page-description').textContent = 'Gérez les protocoles de recherche assignés au comité';
+            document.getElementById('protocols-section').style.display = 'block';
+            document.getElementById('reports-section').style.display = 'none';
+            
+            // Mettre à jour les liens actifs
+            document.querySelectorAll('.sidebar a').forEach(a => a.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            loadProtocols();
+        }
+
+        function showFinalReports() {
+            document.getElementById('page-title').textContent = 'Rapport Final des Délibérations';
+            document.getElementById('page-description').textContent = 'Consultez toutes les délibérations finalisées par le rapporteur';
+            document.getElementById('protocols-section').style.display = 'none';
+            document.getElementById('reports-section').style.display = 'block';
+            
+            // Mettre à jour les liens actifs
+            document.querySelectorAll('.sidebar a').forEach(a => a.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            loadFinalReports();
+        }
+
+        async function loadProtocols() {
+            try {
+                const response = await fetch('/api/president/protocols/verified', {
+                    headers: {
+                        'X-User-ID': currentUser.id,
+                        'X-User-Role': currentUser.role
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayProtocols(data.protocols);
+                } else {
+                    document.getElementById('protocols-section').innerHTML = 
+                        '<div class="empty-state">Erreur: ' + data.error + '</div>';
+                }
+            } catch (error) {
+                document.getElementById('protocols-section').innerHTML = 
+                    '<div class="empty-state">Erreur de connexion</div>';
+            }
+        }
+
+        async function loadFinalReports() {
+            try {
+                const response = await fetch('/api/president/final-reports', {
+                    headers: {
+                        'X-User-ID': currentUser.id,
+                        'X-User-Role': currentUser.role
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayFinalReports(data.deliberations);
+                } else {
+                    document.getElementById('reports-section').innerHTML = 
+                        '<div class="empty-state">Erreur: ' + data.error + '</div>';
+                }
+            } catch (error) {
+                document.getElementById('reports-section').innerHTML = 
+                    '<div class="empty-state">Erreur de connexion</div>';
+            }
+        }
+
+        function displayProtocols(protocols) {
+            if (protocols.length === 0) {
+                document.getElementById('protocols-section').innerHTML = 
+                    '<div class="empty-state">Aucun protocole disponible</div>';
+                return;
+            }
+
+            const html = `
+                <div class="protocols-grid">
+                    ${protocols.map(protocol => `
+                        <div class="protocol-card">
+                            <div class="protocol-title">${protocol.protocolCode} - ${protocol.title}</div>
+                            <div class="protocol-info">Investigateur: ${protocol.principalInvestigator}</div>
+                            <div class="protocol-info">Institution: ${protocol.institution}</div>
+                            <div class="protocol-info">Participants: ${protocol.participants}</div>
+                            <div class="protocol-info">Durée: ${protocol.duration} mois</div>
+                            <div class="protocol-info">
+                                <span class="status-badge status-${protocol.status.toLowerCase().replace('_', '-')}">
+                                    ${getStatusText(protocol.status)}
+                                </span>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            
+            document.getElementById('protocols-section').innerHTML = html;
+        }
+
+        function displayFinalReports(deliberations) {
+            if (deliberations.length === 0) {
+                document.getElementById('reports-section').innerHTML = 
+                    '<div class="empty-state">Aucune délibération finalisée</div>';
+                return;
+            }
+
+            const html = `
+                <div class="deliberations-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>N° Délibération</th>
+                                <th>Protocole</th>
+                                <th>Titre de Recherche</th>
+                                <th>Investigateur</th>
+                                <th>Date</th>
+                                <th>Décision</th>
+                                <th>Rapporteur</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${deliberations.map(deliberation => `
+                                <tr>
+                                    <td>${deliberation.deliberationNumber || 'N/A'}</td>
+                                    <td>${deliberation.protocolCode}</td>
+                                    <td>${deliberation.researchTitle}</td>
+                                    <td>${deliberation.principalInvestigator}</td>
+                                    <td>${formatDate(deliberation.deliberationDate)}</td>
+                                    <td>
+                                        <span class="decision-${deliberation.decision.toLowerCase()}">
+                                            ${getDecisionText(deliberation.decision)}
+                                        </span>
+                                    </td>
+                                    <td>${deliberation.rapporteur}</td>
+                                    <td>
+                                        <button class="btn btn-primary" onclick="viewDeliberation(${deliberation.id})">
+                                            Voir Détails
+                                        </button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            document.getElementById('reports-section').innerHTML = html;
+        }
+
+        function getStatusText(status) {
+            const statusMap = {
+                'VERIFIED': 'Vérifié',
+                'ASSIGNED_TO_MEMBER': 'Assigné',
+                'COMMITTEE_APPROVED': 'Approuvé',
+                'COMMITTEE_REJECTED': 'Rejeté'
+            };
+            return statusMap[status] || status;
+        }
+
+        function getDecisionText(decision) {
+            const decisionMap = {
+                'FAVORABLE': 'Favorable',
+                'AJOURNE': 'Ajourné',
+                'NON_FAVORABLE': 'Non Favorable'
+            };
+            return decisionMap[decision] || decision;
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('fr-FR');
+        }
+
+        async function viewDeliberation(deliberationId) {
+            try {
+                const response = await fetch(`/api/president/final-reports/${deliberationId}`, {
+                    headers: {
+                        'X-User-ID': currentUser.id,
+                        'X-User-Role': currentUser.role
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showDeliberationModal(data.deliberation);
+                } else {
+                    alert('Erreur: ' + data.error);
+                }
+            } catch (error) {
+                alert('Erreur de connexion');
+            }
+        }
+
+        function showDeliberationModal(deliberation) {
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background: rgba(0,0,0,0.5); z-index: 1000; display: flex;
+                align-items: center; justify-content: center;
+            `;
+            
+            modal.innerHTML = `
+                <div style="background: white; padding: 30px; border-radius: 8px; max-width: 800px; max-height: 80vh; overflow-y: auto;">
+                    <h2>Délibération ${deliberation.deliberation_number}</h2>
+                    <hr style="margin: 20px 0;">
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                        <div>
+                            <strong>Protocole:</strong> ${deliberation.protocolcode}<br>
+                            <strong>Titre:</strong> ${deliberation.research_title}<br>
+                            <strong>Investigateur:</strong> ${deliberation.principal_investigator}<br>
+                            <strong>Site:</strong> ${deliberation.research_site}
+                        </div>
+                        <div>
+                            <strong>Date délibération:</strong> ${formatDate(deliberation.deliberation_date)}<br>
+                            <strong>Rapporteur:</strong> ${deliberation.nom_evaluateur}<br>
+                            <strong>Décision:</strong> 
+                            <span class="decision-${deliberation.recommandation_finale.toLowerCase()}">
+                                ${getDecisionText(deliberation.recommandation_finale)}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <strong>Observations:</strong><br>
+                        <div style="background: #f8f9fa; padding: 10px; border-radius: 4px; margin-top: 5px;">
+                            ${deliberation.observations || 'Aucune observation'}
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <strong>Recommandations:</strong><br>
+                        <div style="background: #f8f9fa; padding: 10px; border-radius: 4px; margin-top: 5px;">
+                            ${deliberation.recommendations || 'Aucune recommandation'}
+                        </div>
+                    </div>
+                    
+                    <div style="text-align: right;">
+                        <button class="btn btn-primary" onclick="this.parentElement.parentElement.parentElement.remove()">
+                            Fermer
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    modal.remove();
+                }
+            });
+        }
+
+        function logout() {
+            localStorage.removeItem('userId');
+            localStorage.removeItem('userRole');
+            window.location.href = '/login';
+        }
+
+        // Charger les protocoles au démarrage
+        document.addEventListener('DOMContentLoaded', function() {
+            loadProtocols();
+        });
+    </script>
+</body>
+</html>

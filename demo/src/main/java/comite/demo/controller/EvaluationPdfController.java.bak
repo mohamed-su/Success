@@ -1,0 +1,182 @@
+package comite.demo.controller;
+
+import comite.demo.entity.ProtocolEvaluation;
+import comite.demo.entity.ProtocolSubmission;
+import comite.demo.repository.ProtocolEvaluationRepository;
+import comite.demo.repository.ProtocolSubmissionRepository;
+import com.itextpdf.kernel.pdf.PdfDocument;
+import com.itextpdf.kernel.pdf.PdfWriter;
+import com.itextpdf.layout.Document;
+import com.itextpdf.layout.element.Paragraph;
+import com.itextpdf.layout.element.Table;
+import com.itextpdf.layout.element.Cell;
+import com.itextpdf.layout.properties.TextAlignment;
+import com.itextpdf.layout.properties.UnitValue;
+import com.itextpdf.kernel.colors.DeviceRgb;
+import com.itextpdf.kernel.colors.ColorConstants;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.io.ByteArrayOutputStream;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
+@RestController
+@RequestMapping("/api/evaluation")
+@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:5173"})
+public class EvaluationPdfController {
+
+    @Autowired
+    private ProtocolEvaluationRepository evaluationRepository;
+    
+    @Autowired
+    private ProtocolSubmissionRepository protocolRepository;
+
+    @GetMapping("/pdf/{protocolId}")
+    public ResponseEntity<byte[]> generateEvaluationPdf(@PathVariable Long protocolId) {
+        try {
+            ProtocolEvaluation evaluation = evaluationRepository.findByProtocolId(protocolId)
+                .stream().findFirst().orElse(null);
+            ProtocolSubmission protocol = protocolRepository.findById(protocolId).orElse(null);
+            
+            if (evaluation == null || protocol == null) {
+                return ResponseEntity.notFound().build();
+            }
+
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            PdfWriter writer = new PdfWriter(baos);
+            PdfDocument pdf = new PdfDocument(writer);
+            Document document = new Document(pdf);
+
+            // En-tête officiel
+            document.add(new Paragraph("RÉPUBLIQUE DU BURKINA FASO")
+                .setTextAlignment(TextAlignment.CENTER)
+                .setFontSize(16)
+                .setBold());
+            document.add(new Paragraph("Unité - Travail - Progrès")
+                .setTextAlignment(TextAlignment.CENTER)
+                .setFontSize(10)
+                .setItalic());
+            
+            document.add(new Paragraph(" "));
+            
+            document.add(new Paragraph("COMITÉ D'ÉTHIQUE POUR LA RECHERCHE EN SANTÉ (CERS)")
+                .setTextAlignment(TextAlignment.CENTER)
+                .setFontSize(18)
+                .setBold()
+                .setFontColor(new DeviceRgb(0, 51, 102)));
+            
+            document.add(new Paragraph("RAPPORT D'ÉVALUATION DE PROTOCOLE")
+                .setTextAlignment(TextAlignment.CENTER)
+                .setFontSize(14)
+                .setBold()
+                .setFontColor(new DeviceRgb(204, 0, 0)));
+            
+            document.add(new Paragraph(" "));
+
+            // Informations du protocole
+            Table infoTable = new Table(UnitValue.createPercentArray(new float[]{30, 70}));
+            infoTable.setWidth(UnitValue.createPercentValue(100));
+            
+            infoTable.addCell(new Cell().add(new Paragraph("Référence CERS:").setBold()));
+            infoTable.addCell(new Cell().add(new Paragraph("PROT-" + protocolId)));
+            
+            infoTable.addCell(new Cell().add(new Paragraph("Titre:").setBold()));
+            infoTable.addCell(new Cell().add(new Paragraph(protocol.getTitle())));
+            
+            infoTable.addCell(new Cell().add(new Paragraph("Investigateur:").setBold()));
+            infoTable.addCell(new Cell().add(new Paragraph(protocol.getPrincipalInvestigator())));
+            
+            infoTable.addCell(new Cell().add(new Paragraph("Institution:").setBold()));
+            infoTable.addCell(new Cell().add(new Paragraph(protocol.getInstitution())));
+            
+            infoTable.addCell(new Cell().add(new Paragraph("Date d'évaluation:").setBold()));
+            infoTable.addCell(new Cell().add(new Paragraph(LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")))));
+            
+            document.add(infoTable);
+            document.add(new Paragraph(" "));
+
+            // Critères d'évaluation
+            document.add(new Paragraph("CRITÈRES D'ÉVALUATION").setBold().setFontSize(14));
+            
+            Table evalTable = new Table(UnitValue.createPercentArray(new float[]{60, 20, 20}));
+            evalTable.setWidth(UnitValue.createPercentValue(100));
+            
+            // En-têtes
+            evalTable.addHeaderCell(new Cell().add(new Paragraph("Critères").setBold())
+                .setBackgroundColor(new DeviceRgb(0, 51, 102))
+                .setFontColor(ColorConstants.WHITE));
+            evalTable.addHeaderCell(new Cell().add(new Paragraph("Statut").setBold())
+                .setBackgroundColor(new DeviceRgb(0, 51, 102))
+                .setFontColor(ColorConstants.WHITE));
+            evalTable.addHeaderCell(new Cell().add(new Paragraph("Conforme").setBold())
+                .setBackgroundColor(new DeviceRgb(0, 51, 102))
+                .setFontColor(ColorConstants.WHITE));
+
+            // Critères
+            addEvaluationRow(evalTable, "Protocole en français", evaluation.getProtocoleFrancais());
+            addEvaluationRow(evalTable, "CV des investigateurs", evaluation.getCvInvestigateurs());
+            addEvaluationRow(evalTable, "Formulaire de consentement", evaluation.getFormulaireConsentement());
+            addEvaluationRow(evalTable, "Certificat d'assurance", evaluation.getCertificatAssurance());
+            addEvaluationRow(evalTable, "Pièces de paiement", evaluation.getPiecesPaiement());
+
+            document.add(evalTable);
+            document.add(new Paragraph(" "));
+
+            // Recommandation finale
+            document.add(new Paragraph("RECOMMANDATION FINALE").setBold().setFontSize(14));
+            String recommendation = evaluation.getRecommandationFinale() != null ? 
+                evaluation.getRecommandationFinale() : "Non spécifiée";
+            document.add(new Paragraph(recommendation)
+                .setBold()
+                .setFontSize(12)
+                .setFontColor(new DeviceRgb(204, 0, 0)));
+
+            // Observations
+            if (evaluation.getResumeObservations() != null && !evaluation.getResumeObservations().isEmpty()) {
+                document.add(new Paragraph(" "));
+                document.add(new Paragraph("OBSERVATIONS").setBold().setFontSize(12));
+                document.add(new Paragraph(evaluation.getResumeObservations()));
+            }
+
+            // Signature
+            document.add(new Paragraph(" "));
+            document.add(new Paragraph(" "));
+            document.add(new Paragraph("Rapporteur: " + (evaluation.getNomEvaluateur() != null ? 
+                evaluation.getNomEvaluateur() : "Non spécifié"))
+                .setTextAlignment(TextAlignment.RIGHT));
+            document.add(new Paragraph("Date: " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")))
+                .setTextAlignment(TextAlignment.RIGHT));
+
+            document.close();
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_PDF);
+            headers.setContentDispositionFormData("attachment", "evaluation-PROT-" + protocolId + ".pdf");
+
+            return ResponseEntity.ok()
+                .headers(headers)
+                .body(baos.toByteArray());
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).build();
+        }
+    }
+
+    private void addEvaluationRow(Table table, String criteria, Boolean value) {
+        table.addCell(new Cell().add(new Paragraph(criteria)));
+        
+        String status = value == null ? "N/A" : (value ? "Oui" : "Non");
+        DeviceRgb color = value == null ? new DeviceRgb(128, 128, 128) : 
+                         (value ? new DeviceRgb(0, 128, 0) : new DeviceRgb(255, 0, 0));
+        
+        table.addCell(new Cell().add(new Paragraph(status).setFontColor(color)));
+        table.addCell(new Cell().add(new Paragraph(value != null && value ? "✓" : "✗")
+            .setTextAlignment(TextAlignment.CENTER)
+            .setFontColor(color)));
+    }
+}

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test - Nouveau Formulaire de Délibération</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .protocol-item {
+            border: 1px solid #ddd;
+            padding: 20px;
+            margin: 10px 0;
+            border-radius: 6px;
+            background: #f9f9f9;
+        }
+        .btn {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-info { background: #17a2b8; color: white; }
+        .btn-success { background: #28a745; color: white; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Test du Nouveau Formulaire de Délibération</h1>
+        <p>Cette page teste le remplacement du formulaire d'évaluation par le nouveau formulaire de délibération basé sur le document officiel.</p>
+        
+        <hr style="margin: 30px 0;">
+        
+        <h2>Protocoles de Test</h2>
+        
+        <div class="protocol-item">
+            <h3 class="title">Identification, caractérisation et sélection de souches fermentaires pour une lactofermentation maîtrisé du gombo</h3>
+            <p><strong>Investigateur principal:</strong> <span class="investigator">KANWE Mamounata E M Patricia</span></p>
+            <p><strong>Institution:</strong> <span class="institution">Burkina Faso</span></p>
+            <p><strong>Statut:</strong> Vérifié</p>
+            <div style="margin-top: 15px;">
+                <button class="btn btn-primary">📁 Fichiers</button>
+                <button class="btn btn-info" onclick="showDeliberationForm(1, {
+                    title: 'Identification, caractérisation et sélection de souches fermentaires pour une lactofermentation maîtrisé du gombo',
+                    principalInvestigator: 'KANWE Mamounata E M Patricia',
+                    institution: 'Burkina Faso'
+                })">📋 Délibérer</button>
+                <button class="btn btn-success">📊 Grilles d'Évaluations (0)</button>
+            </div>
+        </div>
+        
+        <div class="protocol-item">
+            <h3 class="title">Étude sur l'efficacité des traitements traditionnels</h3>
+            <p><strong>Investigateur principal:</strong> <span class="investigator">Dr. OUEDRAOGO Alphonse</span></p>
+            <p><strong>Institution:</strong> <span class="institution">CHU Yalgado Ouédraogo</span></p>
+            <p><strong>Statut:</strong> Vérifié</p>
+            <div style="margin-top: 15px;">
+                <button class="btn btn-primary">📁 Fichiers</button>
+                <button class="btn btn-info" onclick="showDeliberationForm(2, {
+                    title: 'Étude sur l\'efficacité des traitements traditionnels',
+                    principalInvestigator: 'Dr. OUEDRAOGO Alphonse',
+                    institution: 'CHU Yalgado Ouédraogo'
+                })">📋 Délibérer</button>
+                <button class="btn btn-success">📊 Grilles d'Évaluations (0)</button>
+            </div>
+        </div>
+        
+        <hr style="margin: 30px 0;">
+        
+        <h2>Instructions d'Intégration</h2>
+        <div style="background: #e7f3ff; padding: 20px; border-radius: 6px; border-left: 4px solid #007bff;">
+            <h3>Pour intégrer dans votre interface rapporteur existante :</h3>
+            <ol>
+                <li><strong>Ajoutez le script :</strong> Incluez le fichier <code>replace-evaluation-form.js</code> dans votre page</li>
+                <li><strong>Remplacement automatique :</strong> Le script remplace automatiquement tous les boutons "Évaluer" par "Délibérer"</li>
+                <li><strong>Nouveau formulaire :</strong> Le formulaire est basé exactement sur le document officiel de délibération</li>
+                <li><strong>Sauvegarde :</strong> Les données sont envoyées vers l'endpoint <code>/api/rapporteur/protocols/{id}/decision</code></li>
+            </ol>
+        </div>
+        
+        <div style="background: #fff3cd; padding: 20px; border-radius: 6px; border-left: 4px solid #ffc107; margin-top: 20px;">
+            <h3>⚠️ Important :</h3>
+            <p>Assurez-vous d'exécuter le script SQL <code>add_deliberation_columns.sql</code> pour ajouter les nouvelles colonnes à la base de données.</p>
+            <p>Vous pouvez utiliser le fichier <code>update-database.bat</code> pour cela.</p>
+        </div>
+        
+        <div style="text-align: center; margin-top: 30px;">
+            <button class="btn btn-primary" onclick="window.location.reload()">🔄 Recharger la page</button>
+            <button class="btn btn-info" onclick="replaceAllEvaluateButtons()">🔄 Re-scanner les boutons</button>
+        </div>
+    </div>
+
+    <!-- Inclure le script du nouveau formulaire -->
+    <script src="replace-evaluation-form.js"></script>
+    
+    <script>
+        // Simuler les données utilisateur pour les tests
+        localStorage.setItem('userId', '1');
+        localStorage.setItem('userRole', 'rapporteur');
+        
+        // Message de bienvenue
+        console.log('🎯 Nouveau formulaire de délibération chargé !');
+        console.log('📋 Cliquez sur "Délibérer" pour tester le formulaire');
+    </script>
+</body>
+</html>
