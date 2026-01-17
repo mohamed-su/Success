@@ -241,6 +241,15 @@ public class PresidentController {
         }
     }
 
+    @GetMapping("/test")
+    public ResponseEntity<?> testEndpoint() {
+        return ResponseEntity.ok(Map.of(
+            "success", true,
+            "message", "PresidentController fonctionne correctement",
+            "timestamp", System.currentTimeMillis()
+        ));
+    }
+
     @GetMapping("/deliberations")
     public ResponseEntity<?> getDeliberations(HttpServletRequest request) {
         String userId = request.getHeader("X-User-ID");

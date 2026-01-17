@@ -1,5 +1,5 @@
-// Configuration centralisée des URLs
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081/api';
+// Configuration centralisée des URLs - FORCE LOCAL
+const BASE_URL = 'http://localhost:8081/api';
 
 // Configuration de l'API
 export const API_CONFIG = {

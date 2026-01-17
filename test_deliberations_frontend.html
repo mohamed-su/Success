@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Délibérations Frontend</title>
+</head>
+<body>
+    <h1>Test de l'endpoint /api/president/deliberations</h1>
+    <button onclick="testDeliberations()">Tester les délibérations</button>
+    <div id="result"></div>
+
+    <script>
+        async function testDeliberations() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Chargement...';
+            
+            try {
+                const response = await fetch('/api/president/deliberations', {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-User-ID': '1',
+                        'X-User-Role': 'president',
+                        'Cache-Control': 'no-cache'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Erreur HTTP: ' + response.status);
+                }
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultDiv.innerHTML = `
+                        <h2>✅ Succès!</h2>
+                        <p><strong>Nombre de délibérations:</strong> ${data.deliberations.length}</p>
+                        <h3>Première délibération:</h3>
+                        <pre>${JSON.stringify(data.deliberations[0], null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <h2>❌ Erreur dans la réponse</h2>
+                        <p>${data.error || 'Erreur inconnue'}</p>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <h2>❌ Erreur de connexion</h2>
+                    <p>${error.message}</p>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

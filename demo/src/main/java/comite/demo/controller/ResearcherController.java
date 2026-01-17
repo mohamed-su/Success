@@ -56,8 +56,7 @@ public class ResearcherController {
                        pe.nom_evaluateur as rapporteur,
                        pe.evaluation_date as evaluationdate,
                        pe.president_signature_date as presidentsignaturedate,
-                       pe.president_name as presidentname,
-                       pe.president_signature as presidentsignature,
+                       'Pr Fla KOUETA' as presidentname,
                        ps.institution,
                        ps.participants,
                        ps.duration,
@@ -68,10 +67,7 @@ public class ResearcherController {
                        ps.consent_form_file_name,
                        ps.cv_files_names,
                        ps.payment_receipt_file_name,
-                       ps.payment_status,
-                       ps.submitter_email,
-                       ps.submitter_phone,
-                       ps.submission_datetime
+                       ps.payment_status
                 FROM protocol_evaluations pe
                 JOIN protocol_submissions ps ON pe.protocol_id = ps.id
                 WHERE pe.president_signature_date IS NOT NULL

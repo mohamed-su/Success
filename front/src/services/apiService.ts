@@ -6,8 +6,8 @@ class ApiService {
   private token: string | null = null;
 
   constructor() {
-    // Utiliser la configuration centralisée
-    this.baseURL = API_CONFIG.BASE_URL;
+    // URL forcée en local
+    this.baseURL = 'http://localhost:8081/api';
     this.token = localStorage.getItem('authToken');
     console.log('ApiService initialized with baseURL:', this.baseURL);
   }

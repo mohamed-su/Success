@@ -55,29 +55,40 @@ const FinalReports = () => {
 
   const fetchDeliberations = async () => {
     try {
+      setLoading(true);
+      setError(null);
+      
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/president/deliberations?t=' + Date.now(), {
+      const userId = localStorage.getItem('userId') || '1';
+      const userRole = localStorage.getItem('userRole') || 'president';
+      
+      // URL directe sans variables
+      const url = 'http://localhost:8081/api/president/deliberations';
+      
+      const response = await fetch(url, {
+        method: 'GET',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
-          'X-User-ID': localStorage.getItem('userId') || '1',
-          'X-User-Role': localStorage.getItem('userRole') || 'president',
+          'Accept': 'application/json',
+          'X-User-ID': userId,
+          'X-User-Role': userRole,
           'Cache-Control': 'no-cache'
         }
       });
 
       if (!response.ok) {
-        throw new Error('Erreur lors du chargement des délibérations');
+        throw new Error(`HTTP ${response.status}`);
       }
 
       const data = await response.json();
+      
       if (data.success) {
-        setDeliberations(data.deliberations);
+        setDeliberations(data.deliberations || []);
       } else {
         setError(data.error || 'Erreur inconnue');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur de connexion');
+      setError('Erreur de connexion: ' + err.message);
     } finally {
       setLoading(false);
     }
@@ -102,7 +113,7 @@ const FinalReports = () => {
       formData.append('presidentName', 'Pr Fla KOUETA');
 
       const token = localStorage.getItem('token');
-      const response = await fetch(`/api/president/send-deliberation/${signatureDeliberation.protocolid}`, {
+      const response = await fetch(`http://localhost:8081/api/president/send-deliberation/${signatureDeliberation.protocolid}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

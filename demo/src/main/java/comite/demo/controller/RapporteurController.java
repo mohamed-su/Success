@@ -58,7 +58,7 @@ public class RapporteurController {
                 FROM protocol_submissions ps 
                 JOIN protocol_member_assignments pma ON ps.id = pma.protocol_id
                 LEFT JOIN protocol_evaluations pe ON ps.id = pe.protocol_id AND pe.evaluator_id = ?
-                WHERE pma.member_id = ? AND (ps.status = 'ASSIGNED_TO_MEMBER' OR pe.id IS NOT NULL)
+                WHERE pma.member_id = ?
                 ORDER BY ps.id DESC
             """;
             
@@ -75,8 +75,10 @@ public class RapporteurController {
                 
                 if (hasDeliberation) {
                     protocol.put("statusLabel", "Délibération soumise");
+                    protocol.put("canEvaluate", false);
                 } else {
                     protocol.put("statusLabel", "En attente d'évaluation");
+                    protocol.put("canEvaluate", true);
                 }
             }
             

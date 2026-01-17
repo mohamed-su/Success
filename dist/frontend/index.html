@@ -1,25 +1,25 @@
 <!doctype html>
-<html lang="fr">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-    <meta http-equiv="Pragma" content="no-cache" />
-    <meta http-equiv="Expires" content="0" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Comité d'Éthique - CERS</title>
+    <title>Vite + React + TS</title>
     <script>
-      // Force clear cache and reload
-      if ('caches' in window) {
-        caches.keys().then(names => {
-          names.forEach(name => caches.delete(name));
-        });
-      }
+      // FORCE LOCALHOST AVANT TOUT
+      const originalFetch = window.fetch;
+      window.fetch = function(url, options) {
+        if (typeof url === 'string' && url.includes('e-agrement.minsante.bf')) {
+          url = url.replace('https://e-agrement.minsante.bf/api', 'http://localhost:8081/api');
+          console.log('URL FORCEE:', url);
+        }
+        return originalFetch.call(this, url, options);
+      };
+      console.log('FETCH OVERRIDE ACTIVE');
     </script>
-    <script src="./fix-urls.js"></script>
-    <script src="./config.js?v=2"></script>
-    <script type="module" crossorigin src="./assets/index-DFKal6Pg.js?v=7"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-iQqWfydo.css?v=6">
+    <script src="/api-proxy.js"></script>
+    <script type="module" crossorigin src="/assets/index-DR4JEVIA.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-iQqWfydo.css">
   </head>
   <body>
     <div id="root"></div>
